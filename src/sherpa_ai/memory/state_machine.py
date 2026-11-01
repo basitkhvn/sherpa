@@ -111,6 +111,9 @@ class SherpaStateMachine:
             >>> print(machine.state)
             'idle'
         """
+        # Per-instance set; a class-level set would be shared by all instances.
+        self.explicit_transitions = set()
+
         for name, action in action_map.items():
             self.__setattr__(name, action)
 
