@@ -195,3 +195,19 @@ def test_get_action_full_callbacks():
     assert action_on_enter1.usage in action.usage
     assert action_on_enter2.usage in action.usage
     assert action_after.usage in action.usage
+
+
+def test_explicit_transitions_not_shared_between_instances():
+    """Regression: explicit_transitions must be per-instance, not class-level."""
+    sm1 = SherpaStateMachine(
+        states=["a", "b"],
+        transitions=[{"trigger": "go1", "source": "a", "dest": "b"}],
+        initial="a",
+    )
+    sm2 = SherpaStateMachine(
+        states=["a", "b"],
+        transitions=[{"trigger": "go2", "source": "a", "dest": "b"}],
+        initial="a",
+    )
+    assert sm1.explicit_transitions == {"go1"}
+    assert sm2.explicit_transitions == {"go2"}
