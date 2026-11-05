@@ -88,3 +88,33 @@ def test_task_agent_succeeds(get_llm, external_api):  # noqa: F811
     # citation headler [?](https://)
 
     assert "](http" in result.content
+
+
+def test_import_does_not_download_nltk_data():
+    """Importing the module must not touch the network (lazy punkt download)."""
+    import importlib
+    import sys
+
+    import nltk
+
+    sys.modules.pop("sherpa_ai.output_parsers.citation_validation", None)
+    with mock.patch.object(nltk, "download", side_effect=AssertionError("download at import")):
+        module = importlib.import_module("sherpa_ai.output_parsers.citation_validation")
+    assert module._punkt_ready is False
+
+
+def test_punkt_downloaded_lazily_and_only_when_missing():
+    from sherpa_ai.output_parsers import citation_validation as cv
+
+    with mock.patch.object(cv, "_punkt_ready", False), mock.patch.object(
+        cv.nltk.data, "find", side_effect=LookupError
+    ), mock.patch.object(cv.nltk, "download") as download:
+        cv._ensure_punkt()
+        cv._ensure_punkt()
+    download.assert_called_once_with("punkt_tab")
+
+    with mock.patch.object(cv, "_punkt_ready", False), mock.patch.object(
+        cv.nltk.data, "find", return_value="found"
+    ), mock.patch.object(cv.nltk, "download") as download:
+        cv._ensure_punkt()
+    download.assert_not_called()

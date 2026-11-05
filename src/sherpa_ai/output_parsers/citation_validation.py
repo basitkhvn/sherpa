@@ -7,16 +7,45 @@ materials and adds appropriate citations using various similarity metrics.
 
 import nltk
 from loguru import logger
-from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.tokenize import sent_tokenize as _nltk_sent_tokenize
+from nltk.tokenize import word_tokenize as _nltk_word_tokenize
 
 from sherpa_ai.actions.base import ActionResource, BaseRetrievalAction
 from sherpa_ai.memory import Belief
 from sherpa_ai.output_parsers.base import BaseOutputProcessor
 from sherpa_ai.output_parsers.validation_result import ValidationResult
 
-# download the punkt tokenizer. This is necessary for the sent_tokenize in NLTK.
-# The download will only happen once and the result will be cached.
-nltk.download("punkt_tab")
+_PUNKT_RESOURCE = "tokenizers/punkt_tab"
+_punkt_ready = False
+
+
+def _ensure_punkt() -> None:
+    """Make sure the NLTK punkt tokenizer data is available.
+
+    The data is needed by ``sent_tokenize``/``word_tokenize``. It is checked,
+    and downloaded only if missing, the first time a tokenizer is used, so that
+    importing this module never touches the network.
+    """
+    global _punkt_ready
+    if _punkt_ready:
+        return
+    try:
+        nltk.data.find(_PUNKT_RESOURCE)
+    except LookupError:
+        nltk.download("punkt_tab")
+    _punkt_ready = True
+
+
+def sent_tokenize(text, *args, **kwargs):
+    """Lazy wrapper around ``nltk.tokenize.sent_tokenize``."""
+    _ensure_punkt()
+    return _nltk_sent_tokenize(text, *args, **kwargs)
+
+
+def word_tokenize(text, *args, **kwargs):
+    """Lazy wrapper around ``nltk.tokenize.word_tokenize``."""
+    _ensure_punkt()
+    return _nltk_word_tokenize(text, *args, **kwargs)
 
 
 class CitationValidation(BaseOutputProcessor):
